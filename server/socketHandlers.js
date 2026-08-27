@@ -4,6 +4,7 @@
 // always measured server-side, never trusted from the client.
 
 const {
+  pools,
   createPool,
   getPool,
   deletePool,
@@ -13,43 +14,73 @@ const {
   publicPlayerList,
   scoreAnswer,
   settlePool,
+  SETTLED_POOL_TTL_MS,
 } = require("./poolManager");
 const { generateQuestions } = require("./aiQuestions");
+
+const MIN_ENTRY_STAKE = 1;
+const MAX_ENTRY_STAKE = 100000;
+const MIN_QUESTION_COUNT = 1;
+const MAX_QUESTION_COUNT = 25;
+const MIN_TIME_LIMIT_SEC = 5;
+const MAX_TIME_LIMIT_SEC = 120;
+const MAX_TOPIC_LENGTH = 200;
+
+function clamp(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
 
 function registerSocketHandlers(io) {
   io.on("connection", (socket) => {
     socket.on("host:create_pool", ({ topic, entryStake, questionCount, timeLimitSec }, ack) => {
+      const trimmedTopic = typeof topic === "string" ? topic.trim().slice(0, MAX_TOPIC_LENGTH) : "";
+      if (!trimmedTopic) return ack?.({ ok: false, error: "Topic is required" });
+
       const pool = createPool({
         hostSocketId: socket.id,
-        topic,
-        entryStake,
-        questionCount: questionCount || 5,
-        timeLimitSec: timeLimitSec || 20,
+        topic: trimmedTopic,
+        entryStake: clamp(entryStake, MIN_ENTRY_STAKE, MAX_ENTRY_STAKE, MIN_ENTRY_STAKE),
+        questionCount: clamp(questionCount, MIN_QUESTION_COUNT, MAX_QUESTION_COUNT, 5),
+        timeLimitSec: clamp(timeLimitSec, MIN_TIME_LIMIT_SEC, MAX_TIME_LIMIT_SEC, 20),
       });
       socket.join(pool.code);
       ack?.({ ok: true, code: pool.code });
     });
 
-    socket.on("player:join", ({ code, name, stakeAmount }, ack) => {
+    socket.on("player:join", ({ code, name }, ack) => {
       const pool = getPool(code);
       if (!pool) return ack?.({ ok: false, error: "Pool not found" });
       if (pool.status !== "open") return ack?.({ ok: false, error: "Pool already started" });
 
-      addPlayer(pool, socket.id, name, stakeAmount);
+      const trimmedName = typeof name === "string" ? name.trim().slice(0, 40) : "";
+      if (!trimmedName) return ack?.({ ok: false, error: "Name is required" });
+      const nameTaken = Array.from(pool.players.values()).some(
+        (p) => p.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (nameTaken) return ack?.({ ok: false, error: "That name is already taken in this pool" });
+
+      const player = addPlayer(pool, socket.id, trimmedName);
       socket.join(pool.code);
 
       io.to(pool.code).emit("pool:player_joined", {
         players: publicPlayerList(pool),
         pot: totalPot(pool),
       });
-      ack?.({ ok: true });
+      ack?.({ ok: true, playerId: player.id });
     });
 
     socket.on("host:start_game", async ({ code }, ack) => {
       const pool = getPool(code);
       if (!pool) return ack?.({ ok: false, error: "Pool not found" });
       if (pool.hostSocketId !== socket.id) return ack?.({ ok: false, error: "Not the host" });
+      if (pool.status !== "open") return ack?.({ ok: false, error: "Game already started" });
       if (pool.players.size < 2) return ack?.({ ok: false, error: "Need at least 2 players" });
+
+      // Mark the pool as busy immediately so a second start_game call (double
+      // click, retry) can't slip in while question generation is in flight.
+      pool.status = "starting";
 
       try {
         io.to(pool.code).emit("pool:generating_questions");
@@ -60,6 +91,7 @@ function registerSocketHandlers(io) {
         advanceToNextQuestion(io, pool);
       } catch (err) {
         console.error("Failed to generate questions:", err.message);
+        pool.status = "open";
         ack?.({ ok: false, error: "Could not generate questions, try again" });
       }
     });
@@ -93,7 +125,7 @@ function registerSocketHandlers(io) {
     });
 
     socket.on("disconnect", () => {
-      for (const [code, pool] of require("./poolManager").pools.entries()) {
+      for (const [code, pool] of pools.entries()) {
         if (pool.players.has(socket.id)) {
           removePlayer(pool, socket.id);
           io.to(code).emit("pool:player_joined", {
@@ -101,7 +133,7 @@ function registerSocketHandlers(io) {
             pot: totalPot(pool),
           });
         }
-        if (pool.hostSocketId === socket.id && pool.status === "open") {
+        if (pool.hostSocketId === socket.id && (pool.status === "open" || pool.status === "starting")) {
           io.to(code).emit("pool:host_left");
           deletePool(code);
         }
@@ -162,6 +194,10 @@ function endGame(io, pool) {
     winners: result.winners,
     finalLeaderboard: publicPlayerList(pool).sort((a, b) => b.score - a.score),
   });
+
+  // Settled pools otherwise sit in memory forever - sweep this one after
+  // clients have had a chance to see the final results.
+  setTimeout(() => deletePool(pool.code), SETTLED_POOL_TTL_MS);
 }
 
 module.exports = { registerSocketHandlers };

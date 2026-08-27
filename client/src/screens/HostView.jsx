@@ -285,7 +285,7 @@ export default function HostView() {
           <div className="player-chip-grid">
             {players.length === 0 && <p className="waiting-text">Waiting for players to join...</p>}
             {players.map((p) => (
-              <div key={p.name} className="player-chip">{p.name}</div>
+              <div key={p.id} className="player-chip">{p.name}</div>
             ))}
           </div>
 
@@ -355,7 +355,7 @@ export default function HostView() {
           <h3>Leaderboard</h3>
           <ol className="rank-list">
             {reveal.leaderboard.map((p, i) => (
-              <li key={p.name} className="rank-row">
+              <li key={p.id} className="rank-row">
                 <span className="rank-number">{i + 1}</span>
                 <span className="rank-name">{p.name}</span>
                 <span className="rank-score"><AnimatedNumber value={p.score} /> pts</span>
@@ -404,7 +404,7 @@ export default function HostView() {
 
         <div className="winner-banner">
           {finalResult.winners.map((w) => (
-            <p key={w.name}><strong>{w.name}</strong> wins <strong>{w.payout}</strong> ({w.score} pts)</p>
+            <p key={w.id}><strong>{w.name}</strong> wins <strong>{w.payout}</strong> ({w.score} pts)</p>
           ))}
         </div>
 
@@ -412,7 +412,7 @@ export default function HostView() {
           <h3>Final Leaderboard</h3>
           <ol className="rank-list">
             {finalResult.finalLeaderboard.map((p, i) => (
-              <li key={p.name} className="rank-row">
+              <li key={p.id} className="rank-row">
                 <span className="rank-number">{i + 1}</span>
                 <span className="rank-name">{p.name}</span>
                 <span className="rank-score"><AnimatedNumber value={p.score} /> pts</span>

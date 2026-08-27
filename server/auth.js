@@ -7,7 +7,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { pool } = require("./db");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-only-secret-change-me";
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET is not set. Add it to server/.env before starting the server."
+  );
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRY = "7d";
 
 function isValidEmail(email) {

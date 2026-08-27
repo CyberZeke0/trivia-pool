@@ -30,7 +30,7 @@ export default function PlayerView() {
   const [stage, setStage] = useState("join");
   const [code, setCode] = useState(searchParams.get("code") || "");
   const [name, setName] = useState("");
-  const [stakeAmount, setStakeAmount] = useState(10);
+  const [playerId, setPlayerId] = useState(null);
   const [error, setError] = useState("");
 
   const [players, setPlayers] = useState([]);
@@ -105,8 +105,9 @@ export default function PlayerView() {
 
   function joinPool() {
     if (!code.trim() || !name.trim()) return setError("Enter code and name");
-    socket.emit("player:join", { code, name, stakeAmount }, (res) => {
+    socket.emit("player:join", { code, name }, (res) => {
       if (!res.ok) return setError(res.error);
+      setPlayerId(res.playerId);
       setStage("lobby");
     });
   }
@@ -130,10 +131,6 @@ export default function PlayerView() {
             <label>Your name</label>
             <input placeholder="e.g. Alex" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="field-group full-width">
-            <label>Your stake</label>
-            <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} />
-          </div>
           {error && <p className="error">{error}</p>}
           <button className="btn" onClick={joinPool}>Join</button>
         </div>
@@ -147,7 +144,7 @@ export default function PlayerView() {
         <h2>Waiting for host to start...</h2>
         <p>Pot so far: {pot}</p>
         <ul>{players.map((p) => (
-          <li key={p.name}>{p.name}</li>
+          <li key={p.id}>{p.name}</li>
         ))}</ul>
       </div>
     );
@@ -220,7 +217,7 @@ export default function PlayerView() {
           <h3>Leaderboard</h3>
           <ol className="rank-list">
             {reveal.leaderboard.map((p, i) => (
-              <li key={p.name} className={`rank-row ${p.name === name ? "rank-row-me" : ""}`}>
+              <li key={p.id} className={`rank-row ${p.id === playerId ? "rank-row-me" : ""}`}>
                 <span className="rank-number">{i + 1}</span>
                 <span className="rank-name">{p.name}</span>
                 <span className="rank-score"><AnimatedNumber value={p.score} /> pts</span>
@@ -233,7 +230,7 @@ export default function PlayerView() {
   }
 
   if (stage === "ended" && finalResult) {
-    const iWon = finalResult.winners.some((w) => w.name === name);
+    const iWon = finalResult.winners.some((w) => w.id === playerId);
     const [firstTier, secondTier, thirdTier] = getPodiumTiers(finalResult.finalLeaderboard);
     return (
       <div className="screen center pop-in">
@@ -271,14 +268,14 @@ export default function PlayerView() {
         </div>
 
         <div className="winner-banner">
-          {finalResult.winners.map((w) => <p key={w.name}><strong>{w.name}</strong> wins <strong>{w.payout}</strong></p>)}
+          {finalResult.winners.map((w) => <p key={w.id}><strong>{w.name}</strong> wins <strong>{w.payout}</strong></p>)}
         </div>
 
         <div className="leaderboard-card">
           <h3>Final Leaderboard</h3>
           <ol className="rank-list">
             {finalResult.finalLeaderboard.map((p, i) => (
-              <li key={p.name} className={`rank-row ${p.name === name ? "rank-row-me" : ""}`}>
+              <li key={p.id} className={`rank-row ${p.id === playerId ? "rank-row-me" : ""}`}>
                 <span className="rank-number">{i + 1}</span>
                 <span className="rank-name">{p.name}</span>
                 <span className="rank-score"><AnimatedNumber value={p.score} /> pts</span>

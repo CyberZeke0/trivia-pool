@@ -2,7 +2,13 @@
 // Holds all active pools in memory. Fine for a single server instance / MVP.
 // If you scale to multiple server processes later, move this to Redis.
 
+const crypto = require("crypto");
+
 const pools = new Map(); // code -> Pool
+
+// How long a settled pool stays in memory after the game ends, so late
+// clients/UI can still fetch the final state before it's swept.
+const SETTLED_POOL_TTL_MS = 5 * 60 * 1000;
 
 function generateCode() {
   let code;
@@ -43,14 +49,19 @@ function deletePool(code) {
   pools.delete(code);
 }
 
-function addPlayer(pool, socketId, name, stakeAmount) {
-  pool.players.set(socketId, {
+function addPlayer(pool, socketId, name) {
+  const player = {
+    id: crypto.randomUUID(),
     socketId,
     name,
-    stakeAmount: Number(stakeAmount) || pool.entryStake,
+    // Stake is fixed by the pool the host set up - not client-supplied -
+    // so the pot/payout math can't be manipulated by a joining player.
+    stakeAmount: pool.entryStake,
     score: 0,
     answers: new Map(),
-  });
+  };
+  pool.players.set(socketId, player);
+  return player;
 }
 
 function removePlayer(pool, socketId) {
@@ -65,6 +76,7 @@ function totalPot(pool) {
 
 function publicPlayerList(pool) {
   return Array.from(pool.players.values()).map((p) => ({
+    id: p.id,
     name: p.name,
     score: p.score,
   }));
@@ -85,12 +97,13 @@ function settlePool(pool) {
   const splitAmount = winners.length > 0 ? pot / winners.length : 0;
   return {
     pot,
-    winners: winners.map((w) => ({ socketId: w.socketId, name: w.name, score: w.score, payout: splitAmount })),
+    winners: winners.map((w) => ({ id: w.id, socketId: w.socketId, name: w.name, score: w.score, payout: splitAmount })),
   };
 }
 
 module.exports = {
   pools,
+  SETTLED_POOL_TTL_MS,
   createPool,
   getPool,
   deletePool,
