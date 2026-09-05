@@ -1,5 +1,5 @@
 // auth.js
-// User accounts now persist in Postgres (see db.js) instead of server
+// User accounts persist in Postgres (see db.js) instead of server
 // memory - accounts survive restarts, unlike pools which are still
 // intentionally in-memory since a game session doesn't need to persist.
 
@@ -7,17 +7,29 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { pool } = require("./db");
 
-if (!process.env.JWT_SECRET) {
-  throw new Error(
-    "JWT_SECRET is not set. Add it to server/.env before starting the server."
-  );
-}
 const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set. Add it to server/.env before starting the server.");
+}
 const TOKEN_EXPIRY = "7d";
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+function isStrongPassword(password) {
+  return (
+    typeof password === "string" &&
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*(),.?":{}|<>_\-]/.test(password)
+  );
+}
+
+const PASSWORD_ERROR =
+  "Password must be at least 8 characters and include an uppercase letter, lowercase letter, number, and special character";
 
 async function signup({ email, password, displayName }) {
   const normalizedEmail = email.trim().toLowerCase();
@@ -25,8 +37,8 @@ async function signup({ email, password, displayName }) {
   if (!isValidEmail(normalizedEmail)) {
     throw new Error("Enter a valid email address");
   }
-  if (!password || password.length < 6) {
-    throw new Error("Password must be at least 6 characters");
+  if (!isStrongPassword(password)) {
+    throw new Error(PASSWORD_ERROR);
   }
 
   const existing = await pool.query("SELECT 1 FROM users WHERE email = $1", [
@@ -82,8 +94,8 @@ async function resetPassword({ email, newPassword }) {
   if (!user) {
     throw new Error("No account found with this email");
   }
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error("Password must be at least 6 characters");
+  if (!isStrongPassword(newPassword)) {
+    throw new Error(PASSWORD_ERROR);
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
