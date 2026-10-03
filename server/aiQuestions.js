@@ -1,6 +1,6 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai");
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Mixed question types used when no API key is set. Note choices.length
 // varies: 2 for true/false, 4 for standard/none-of-the-above questions.
@@ -73,20 +73,20 @@ function stripFences(text) {
 }
 
 async function requestBatch(topic, count) {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-5",
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
     max_tokens: 2000,
     messages: [{ role: "user", content: buildPrompt(topic, count) }],
   });
-  const text = response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  const text = response.choices[0].message.content;
   const parsed = JSON.parse(stripFences(text));
   if (!Array.isArray(parsed)) throw new Error("AI response was not an array");
   return parsed;
 }
 
 async function generateQuestions(topic, count, maxAttempts = 3) {
-  if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === "your_anthropic_api_key_here") {
-    console.warn("No ANTHROPIC_API_KEY set - using fallback test questions instead of AI generation.");
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") {
+    console.warn("No OPENAI_API_KEY set - using fallback test questions instead of AI generation.");
     const shuffled = [...FALLBACK_QUESTIONS].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
   }
