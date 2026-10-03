@@ -22,9 +22,9 @@ npm install
 cp .env.example .env
 ```
 
-Open `.env` and add your Anthropic API key:
-```
-ANTHROPIC_API_KEY=sk-ant-...
+Open .env and add your OpenAI API key:
+
+OPENAI_API_KEY=sk-...
 ```
 
 Run it:
