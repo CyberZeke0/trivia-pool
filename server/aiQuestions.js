@@ -1,5 +1,5 @@
-
-// Updated: OpenAI APIconst OpenAI = require("openai");
+// Updated: OpenAI API
+const OpenAI = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
