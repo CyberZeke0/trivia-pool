@@ -71,8 +71,8 @@ initDb()
   .then(() => {
     server.listen(PORT, () => {
       console.log(`Trivia pool server running on http://localhost:${PORT}`);
-      if (!process.env.ANTHROPIC_API_KEY) {
-        console.warn("WARNING: ANTHROPIC_API_KEY not set - question generation will fail. Copy .env.example to .env and add your key.");
+      if (!process.env.OPENAI_API_KEY) {
+       console.warn("WARNING: OPENAI_API_KEY not set - question generation will fail. Copy .env.example to .env and add your key.");
       }
     });
   })
