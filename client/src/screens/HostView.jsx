@@ -276,6 +276,25 @@ export default function HostView() {
           <p className="subtitle">Players join at /play with this code</p>
           <div className="pin">{code}</div>
 
+{/* Share link */}
+<div style={{marginTop: '16px', textAlign: 'center'}}>
+  <p style={{fontSize: '13px', color: '#888', marginBottom: '8px'}}>Or share this link:</p>
+  <div style={{display: 'flex', alignItems: 'center', gap: '8px', background: '#1a1a1a', borderRadius: '8px', padding: '10px 14px'}}>
+    <span style={{fontSize: '13px', color: '#aaa', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+      {`${window.location.origin}/play?code=${code}`}
+    </span>
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(`${window.location.origin}/play?code=${code}`);
+        alert('Link copied!');
+      }}
+      style={{background: '#F5A623', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap'}}
+    >
+      Copy Link
+    </button>
+  </div>
+</div>
+
           <div className="lobby-status">
             <span>Pot: <strong>{pot}</strong></span>
             <span>•</span>
