@@ -9,6 +9,10 @@ const { signup, login, resetPassword, requireAuth } = require("./auth");
 const { initDb } = require("./db");
 
 const app = express();
+
+// Fix for express-rate-limit X-Forwarded-For error on Render
+app.set("trust proxy", 1);
+
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" }));
 app.use(express.json());
 
@@ -19,6 +23,7 @@ const authLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  trustProxy: true,
   message: { error: "Too many attempts, please try again later" },
 });
 
@@ -40,7 +45,7 @@ app.post("/api/login", authLimiter, async (req, res) => {
     const result = await login({ email, password });
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(401).json({ error: err.message });
   }
 });
 
@@ -60,7 +65,10 @@ app.get("/api/me", requireAuth, (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_ORIGIN || "http://localhost:5173" },
+  cors: {
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
 });
 
 registerSocketHandlers(io);
@@ -72,7 +80,9 @@ initDb()
     server.listen(PORT, () => {
       console.log(`Trivia pool server running on http://localhost:${PORT}`);
       if (!process.env.OPENAI_API_KEY) {
-       console.warn("WARNING: OPENAI_API_KEY not set - question generation will fail. Copy .env.example to .env and add your key.");
+        console.warn(
+          "WARNING: OPENAI_API_KEY not set - question generation will fail. Copy .env.example to .env and add your key."
+        );
       }
     });
   })
