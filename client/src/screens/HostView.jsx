@@ -279,7 +279,7 @@ export default function HostView() {
 {/* Share link */}
 <div style={{marginTop: '16px', textAlign: 'center'}}>
   <p style={{fontSize: '13px', color: '#888', marginBottom: '8px'}}>Or share this link:</p>
-  <div style={{display: 'flex', alignItems: 'center', gap: '8px', background: '#1a1a1a', borderRadius: '8px', padding: '10px 14px'}}>
+  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: '#1a1a1a', borderRadius: '8px', padding: '10px 14px', maxWidth: '320px', margin: '0 auto'}}>
     <span style={{fontSize: '13px', color: '#aaa', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
       {`${window.location.origin}/play?code=${code}`}
     </span>
