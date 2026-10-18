@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getCurrentUser, logout } from "../auth";
 
 const RECENT_TOPICS_KEY = "triviaPool.recentTopics";
+const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:4000";
 
 function loadRecentTopics() {
   try {
@@ -28,6 +29,9 @@ export default function Dashboard() {
   const user = getCurrentUser();
   const [recentTopics, setRecentTopics] = useState([]);
   const [activeNav, setActiveNav] = useState("home");
+  const [stats, setStats] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -36,6 +40,30 @@ export default function Dashboard() {
     }
     setRecentTopics(loadRecentTopics());
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (activeNav === "reports" && user) {
+      fetchStats();
+    }
+  }, [activeNav]);
+
+  async function fetchStats() {
+    setLoadingStats(true);
+    try {
+      const name = user.displayName;
+      const [statsRes, historyRes] = await Promise.all([
+        fetch(`${SERVER}/api/stats/${encodeURIComponent(name)}`),
+        fetch(`${SERVER}/api/history/${encodeURIComponent(name)}`),
+      ]);
+      const statsData = await statsRes.json();
+      const historyData = await historyRes.json();
+      setStats(statsData);
+      setHistory(historyData);
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+    setLoadingStats(false);
+  }
 
   function handleLogout() {
     logout();
@@ -67,7 +95,7 @@ export default function Dashboard() {
             className={`dash-nav-item ${activeNav === "reports" ? "dash-nav-active" : ""}`}
             onClick={() => setActiveNav("reports")}
           >
-            📊 Reports
+            📊 My Stats
           </button>
         </nav>
         <button className="dash-logout" onClick={handleLogout}>Log Out</button>
@@ -121,7 +149,7 @@ export default function Dashboard() {
         {activeNav === "library" && (
           <div className="dash-content">
             <h2>Your Library</h2>
-            <p className="subtitle">All topics you've hosted before, saved on this device. Remove ones you don't want anymore.</p>
+            <p className="subtitle">All topics you've hosted before, saved on this device.</p>
             {recentTopics.length === 0 ? (
               <p className="waiting-text">Your library is empty — host a pool to add your first topic.</p>
             ) : (
@@ -146,12 +174,75 @@ export default function Dashboard() {
 
         {activeNav === "reports" && (
           <div className="dash-content">
-            <h2>Reports</h2>
-            <p className="subtitle">Post-game history and results — coming soon.</p>
-            <div className="dash-empty-state">
-              <div className="dash-empty-icon">📊</div>
-              <p>Once you host some games, results will show up here.</p>
-            </div>
+            <h2>My Stats</h2>
+            <p className="subtitle">Your personal game history and performance.</p>
+
+            {loadingStats ? (
+              <p className="waiting-text">Loading your stats...</p>
+            ) : (
+              <>
+                {/* Stats cards */}
+                {stats && (
+                  <div className="dash-stats-grid">
+                    <div className="dash-stat-card">
+                      <div className="dash-stat-icon">🎮</div>
+                      <div className="dash-stat-num">{stats.total_games || 0}</div>
+                      <div className="dash-stat-label">Games Played</div>
+                    </div>
+                    <div className="dash-stat-card">
+                      <div className="dash-stat-icon">🏆</div>
+                      <div className="dash-stat-num">{stats.total_wins || 0}</div>
+                      <div className="dash-stat-label">Total Wins</div>
+                    </div>
+                    <div className="dash-stat-card">
+                      <div className="dash-stat-icon">💰</div>
+                      <div className="dash-stat-num">{stats.total_earnings || 0}</div>
+                      <div className="dash-stat-label">Total Earnings</div>
+                    </div>
+                    <div className="dash-stat-card">
+                      <div className="dash-stat-icon">⭐</div>
+                      <div className="dash-stat-num">{stats.best_score || 0}</div>
+                      <div className="dash-stat-label">Best Score</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Game history */}
+                <h3 className="dash-section-title">Game History</h3>
+                {history.length === 0 ? (
+                  <div className="dash-empty-state">
+                    <div className="dash-empty-icon">📊</div>
+                    <p>No games yet — play a game to see your history here!</p>
+                  </div>
+                ) : (
+                  <div className="dash-history-list">
+                    {history.map((game, i) => (
+                      <div key={i} className="dash-history-item">
+                        <div className="dash-history-left">
+                          <div className="dash-history-icon">
+                            {game.won ? '🏆' : '🎮'}
+                          </div>
+                          <div>
+                            <div className="dash-history-topic">{game.topic}</div>
+                            <div className="dash-history-date">
+                              {new Date(game.created_at).toLocaleDateString('en-NG', {
+                                day: 'numeric', month: 'short', year: 'numeric',
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="dash-history-right">
+                          <div className="dash-history-score">{game.score} pts</div>
+                          {game.won && (
+                            <div className="dash-history-win">Won {game.payout}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
