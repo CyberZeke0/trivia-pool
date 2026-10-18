@@ -6,7 +6,7 @@ const rateLimit = require("express-rate-limit");
 const { Server } = require("socket.io");
 const { registerSocketHandlers } = require("./socketHandlers");
 const { signup, login, resetPassword, requireAuth } = require("./auth");
-const { initDb } = require("./db");
+const { initDb, getPlayerStats, getPlayerHistory } = require("./db");
 
 const app = express();
 
