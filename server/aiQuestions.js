@@ -3,8 +3,6 @@ const OpenAI = require("openai");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Mixed question types used when no API key is set. Note choices.length
-// varies: 2 for true/false, 4 for standard/none-of-the-above questions.
 const FALLBACK_QUESTIONS = [
   { question: "What planet is known as the Red Planet?", choices: ["Venus", "Mars", "Jupiter", "Saturn"], correctIndex: 1 },
   { question: "How many continents are there?", choices: ["5", "6", "7", "8"], correctIndex: 2 },
@@ -45,28 +43,14 @@ Rules:
 }
 
 function isValidQuestion(q) {
-  if (
-    !q ||
-    typeof q.question !== "string" ||
-    q.question.trim().length === 0 ||
-    !Array.isArray(q.choices)
-  ) {
+  if (!q || typeof q.question !== "string" || q.question.trim().length === 0 || !Array.isArray(q.choices)) {
     return false;
   }
-
   const len = q.choices.length;
   if (len !== 2 && len !== 4) return false;
-
-  const choicesValid = q.choices.every(
-    (c) => typeof c === "string" && c.trim().length > 0
-  );
+  const choicesValid = q.choices.every((c) => typeof c === "string" && c.trim().length > 0);
   if (!choicesValid) return false;
-
-  return (
-    Number.isInteger(q.correctIndex) &&
-    q.correctIndex >= 0 &&
-    q.correctIndex < len
-  );
+  return Number.isInteger(q.correctIndex) && q.correctIndex >= 0 && q.correctIndex < len;
 }
 
 function stripFences(text) {
@@ -108,9 +92,7 @@ async function generateQuestions(topic, count, maxAttempts = 3) {
   }
 
   if (questions.length < count) {
-    throw new Error(
-      `Only generated ${questions.length}/${count} valid questions after ${maxAttempts} attempts`
-    );
+    throw new Error(`Only generated ${questions.length}/${count} valid questions after ${maxAttempts} attempts`);
   }
 
   return questions;
