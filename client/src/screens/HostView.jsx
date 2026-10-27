@@ -8,9 +8,6 @@ import { getCurrentUser } from "../auth";
 
 const SHAPE_ICONS = ["▲", "◆", "●", "■"];
 
-// Groups the sorted leaderboard into up to 3 podium tiers, keeping
-// players with equal scores together in the same tier instead of
-// splitting a tie across two different podium places.
 function getPodiumTiers(leaderboard) {
   const tiers = [];
   let i = 0;
@@ -25,6 +22,7 @@ function getPodiumTiers(leaderboard) {
   }
   return tiers;
 }
+
 const RECENT_TOPICS_KEY = "triviaPool.recentTopics";
 const MAX_RECENT_TOPICS = 8;
 
@@ -273,27 +271,34 @@ export default function HostView() {
     return (
       <div className="screen center">
         <div className="lobby-card">
+          <button
+            className="back-home-link"
+            onClick={() => navigate(`/play?code=${code}`)}
+            style={{ background: "none", border: "none", cursor: "pointer", alignSelf: "flex-start", marginBottom: "8px" }}
+          >
+            ← Join as Player
+          </button>
+
           <p className="subtitle">Players join at /play with this code</p>
           <div className="pin">{code}</div>
 
-{/* Share link */}
-<div style={{marginTop: '16px', textAlign: 'center'}}>
-  <p style={{fontSize: '13px', color: '#888', marginBottom: '8px'}}>Or share this link:</p>
-  <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: '#1a1a1a', borderRadius: '8px', padding: '10px 14px', maxWidth: '320px', margin: '0 auto'}}>
-    <span style={{fontSize: '13px', color: '#aaa', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-      {`${window.location.origin}/play?code=${code}`}
-    </span>
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(`${window.location.origin}/play?code=${code}`);
-        alert('Link copied!');
-      }}
-      style={{background: '#F5A623', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap'}}
-    >
-      Copy Link
-    </button>
-  </div>
-</div>
+          <div style={{marginTop: '16px', textAlign: 'center'}}>
+            <p style={{fontSize: '13px', color: '#888', marginBottom: '8px'}}>Or share this link:</p>
+            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', background: '#1a1a1a', borderRadius: '8px', padding: '10px 14px', maxWidth: '320px', margin: '0 auto'}}>
+              <span style={{fontSize: '13px', color: '#aaa', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {`${window.location.origin}/play?code=${code}`}
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/play?code=${code}`);
+                  alert('Link copied!');
+                }}
+                style={{background: '#F5A623', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap'}}
+              >
+                Copy Link
+              </button>
+            </div>
+          </div>
 
           <div className="lobby-status">
             <span>Pot: <strong>{pot}</strong></span>
